@@ -1,0 +1,32 @@
+Ours - Asaf's
+pgInfo - pgdesc
+pgFreeLinkedList - freepg
+numOfPagesInMemory - pagesinmem
+numOfPagesInDisk - pagesinswapfile
+numOfFaultyPages - totalPageFaultCount
+totalSwappedFiles - totalPagedOutCount
+memPgArray - freepages
+dskPgArray - swappedpages
+lstStart - head
+lstEnd - tail
+vm.c -> pageOut() - swapPages()
+
+changes requierd:
+FIFO -> LIFO
+NFU -> LAP
+Tip: Your LAP implementation should use the timer interrupts to update its
+data structure
+LAP: do we need to update fork? (head\tail)
+Tip: Don't forget to clear the PTE_A flag 
+
+uncomment MAKEFILE
+SATURDAY: we stopped in fifoWrite.
+vm.c -> change names: deallocCount, MAX_POSSIBLE, checkProcAccBit (check if needed)
+vm.c -> scFifoMemPaging -> understand it later!!!
+vm.c -> recordNewPage is not named addPageByAlgo
+check if we need proc->totalPageFaultCount and if not - delete references
+sh.c > line 158 > delete the printf's
+task2: exec.c - check if the #NONE parts (start and end of function) is necessary.
+task 3:
+proc.c -> printProcMemPageInfo(), procdump(), exit()
+
