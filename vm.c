@@ -7,9 +7,13 @@
 #include "proc.h"
 #include "elf.h"
 
+#define SIZEOF_BUFFER PGSIZE /4 
+#define MAX_POSSIBLE  ~0x80000000
+
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
 struct segdesc gdt[NSEGS];
+int deallocCount = 0;
 
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
@@ -62,6 +66,23 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
     *pde = v2p(pgtab) | PTE_P | PTE_W | PTE_U;
   }
   return &pgtab[PTX(va)];
+}
+
+//can be deleted?
+void
+checkProcAccBit(){ 
+  int i;
+  pte_t *pte1;
+
+  for (i = 0; i < MAX_PSYC_PAGES; i++)
+    if (proc->memPgArray[i].va != (char*)0xffffffff){
+      pte1 = walkpgdir(proc->pgdir, (void*)proc->memPgArray[i].va, 0);
+      if (!*pte1){
+        cprintf("checkAccessedBit: pte1 is empty\n");
+        continue;
+      }
+      cprintf("checkAccessedBit: pte1 & PTE_A == %d\n", (*pte1) & PTE_A);
+    }
 }
 
 // Create PTEs for virtual addresses starting at va that refer to
@@ -214,6 +235,67 @@ loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
   }
   return 0;
 }
+
+
+void lifoMemPaging(char *va){
+  int i;
+  //check for empty slot in memory free pages table
+  for (i = 0; i < MAX_PSYC_PAGES; i++)
+    if (proc->memPgArray[i].va == (char*)0xffffffff){
+        proc->memPgArray[i].va = va;
+        //adding each page record to the end, will extract the head
+        proc->memPgArray[i].prv = proc->lstEnd;
+        proc->lstEnd = &proc->memPgArray[i];
+        break;
+    }
+    else{
+      cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
+      panic("recordNewPage: no free pages");
+    }
+}
+
+//fix later, check that it works
+void scFifoMemPaging(char *va){
+  int i;
+  for (i = 0; i < MAX_PSYC_PAGES; i++){
+    if (proc->freepages[i].va == (char*)0xffffffff){
+      proc->memPgArray[i].va = va;
+      proc->memPgArray[i].nxt = proc->lstStart;
+      proc->memPgArray[i].prv = 0;
+      if(proc->lstStart != 0)// old head points back to new head
+        proc->lstStart->prv = &proc->memPgArray[i];
+      else//head == 0 so first link inserted is also the tail
+        proc->lstEnd = &proc->memPgArray[i];
+      proc->lstStart = &proc->memPgArray[i];
+      break;
+    }
+    else{
+      cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
+      panic("recordNewPage: no free pages");
+    }
+  }
+}
+
+
+//new page in memmory by algo
+void addPageByAlgo(char *va) { //recordNewPage (asaf)
+#if LIFO
+  lifoMemPaging(va);
+#else
+
+#if SCFIFO
+  scFifoMemPaging(va);
+#else
+
+//#if ALP
+  //nfuRecord(va);
+//#endif
+#endif
+#endif
+  proc->numOfPagesInMemory++;
+}
+
+
 
 // Allocate page tables and physical memory to grow process from oldsz to
 // newsz, which need not be page aligned.  Returns new size or 0 on error.

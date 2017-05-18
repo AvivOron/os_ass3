@@ -6,6 +6,8 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+//#include "kalloc.h"
+
 
 struct {
   struct spinlock lock;
@@ -32,7 +34,7 @@ pinit(void)
 // state required to run in the kernel.
 // Otherwise return 0.
 static struct proc*
-allocproc(void)
+allocproc(void) // changed: initialize paging data 
 {
   struct proc *p;
   char *sp;
@@ -69,6 +71,26 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+
+  //paging information initialization 
+  p->lstStart = 0; 
+  p->lstEnd = 0; 
+  p->numOfPagesInMemory = 0;
+  p->numOfPagesInDisk = 0;
+  p->numOfFaultyPages = 0;
+  p->totalSwappedFiles = 0;
+
+  for (int i = 0; i < MAX_PSYC_PAGES; i++){
+    p->memPgArray[i].va = (char*)0xffffffff;
+    p->memPgArray[i].nxt = 0;
+    p->memPgArray[i].prv = 0;
+    p->memPgArray[i].exists_time = 0;
+    p->dskPgArray[i].accesedCount = 0;
+    p->dskPgArray[i].va = (char*)0xffffffff;
+    p->dskPgArray[i].f_location = 0;
+  }
+
+
 
   return p;
 }
@@ -125,8 +147,8 @@ growproc(int n)
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
-int
-fork(void)
+int 
+fork(void) //copy paging data of parent
 {
   int i, pid;
   struct proc *np;
@@ -146,6 +168,10 @@ fork(void)
   np->parent = proc;
   *np->tf = *proc->tf;
 
+  //saving the parent pages data
+  np->numOfPagesInMemory = proc->numOfPagesInMemory;
+  np->numOfPagesInDisk = proc->numOfPagesInDisk;
+
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
 
@@ -157,6 +183,63 @@ fork(void)
   safestrcpy(np->name, proc->name, sizeof(proc->name));
  
   pid = np->pid;
+
+  //swap file changes
+  createSwapFile(np);
+  char buffer[PGSIZE/2] = "";
+  int bytsRead = 0;
+  int off = 0;
+  //read parent swap file
+  if(proc->pid > 2){ //check that is not init / sh
+    while((bytsRead = readFromSwapFile(proc, buffer, off, PGSIZE/2)) != 0){
+      if(writeToSwapFile(np, buffer, off, bytsRead) == -1)
+        panic("fork problem while copying swap file");
+      off += bytsRead;
+    }
+  }
+
+  //copy pages info
+  for(int i = 0; i< MAX_PSYC_PAGES; i++){
+    np->memPgArray[i].va = proc->memPgArray[i].va;
+    np->memPgArray[i].exists_time = proc->memPgArray[i].exists_time;
+    np->dskPgArray[i].accesedCount = proc->dskPgArray[i].accesedCount;
+    np->dskPgArray[i].va = proc->dskPgArray[i].va;
+    np->dskPgArray[i].f_location = proc->dskPgArray[i].f_location;
+  }
+
+  //linking the list 
+  for(int i = 0; i< MAX_PSYC_PAGES; i++){
+    for(int j = 0; j< MAX_PSYC_PAGES; j++){
+      if(np->memPgArray[j].va == proc->memPgArray[i].prv->va)
+        np->memPgArray[i].prv = &np->memPgArray[j];
+      if(np->memPgArray[j].va == proc->memPgArray[i].nxt->va)
+        np->memPgArray[i].nxt = &np->memPgArray[j];
+    }
+  }
+
+//if SCFIFO initiate head and tail of linked list accordingly
+  #if SCFIFO
+    for (int i = 0; i < MAX_PSYC_PAGES; i++) {
+      if (proc->lstStart->va == np->memPgArray[i].va){
+        np->lstStart = &np->memPgArray[i];
+      }
+      if (proc->lstEnd->va == np->memPgArray[i].va){
+        np->lstEnd = &np->memPgArray[i];
+      }
+    }
+  #endif
+
+//if LIFO initiate head and tail of linked list accordingly, ***assuming extraction from tail said***
+  #if LIFO
+    for (int i = 0; i < MAX_PSYC_PAGES; i++) {
+      if (proc->lstStart->va == np->memPgArray[i].va){
+        np->lstStart = &np->memPgArray[i];
+      }
+      if (proc->lstEnd->va == np->memPgArray[i].va){
+        np->lstEnd = &np->memPgArray[i];
+      }
+    }
+  #endif
 
   // lock to force the compiler to emit the np->state write last.
   acquire(&ptable.lock);
@@ -178,6 +261,10 @@ exit(void)
   if(proc == initproc)
     panic("init exiting");
 
+  //remove the swap files
+  if(removeSwapFile(proc)!=0)
+    panic("couldnt delete swap file");
+
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
     if(proc->ofile[fd]){
@@ -185,6 +272,8 @@ exit(void)
       proc->ofile[fd] = 0;
     }
   }
+
+
 
   begin_op();
   iput(proc->cwd);

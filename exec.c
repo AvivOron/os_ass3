@@ -8,7 +8,7 @@
 #include "elf.h"
 
 int
-exec(char *path, char **argv)
+exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. if faild - go back to bkp
 {
   char *s, *last;
   int i, off;
@@ -34,6 +34,44 @@ exec(char *path, char **argv)
 
   if((pgdir = setupkvm()) == 0)
     goto bad;
+
+// backup the proc page fields in case exec fails
+#ifndef NONE
+  int numOfPagesInMemory = proc->numOfPagesInMemory;
+  int numOfPagesInDisk = proc->numOfPagesInDisk;
+  int numOfFaultyPages = proc->numOfFaultyPages;
+  int totalSwappedFiles = proc->totalSwappedFiles;
+  struct pgFreeLinkedList memPgArray[MAX_PSYC_PAGES];
+  struct pgInfo dskPgArray[MAX_PSYC_PAGES];
+
+  struct pgFreeLinkedList *lstStart = proc->lstStart;
+  struct pgFreeLinkedList *lstEnd = proc->lstEnd;
+  proc->numOfPagesInMemory = 0;
+  proc->numOfPagesInDisk = 0;
+  proc->totalSwappedFiles = 0;
+  proc->numOfFaultyPages = 0;
+  proc->lstStart = 0;
+  proc->lstEnd = 0;
+  // clear all pages
+  for (i = 0; i < MAX_PSYC_PAGES; i++) {
+    memPgArray[i].va = proc->memPgArray[i].va;
+    proc->memPgArray[i].va = (char*)0xffffffff;
+    memPgArray[i].nxt = proc->memPgArray[i].nxt;
+    proc->memPgArray[i].nxt = 0;
+    memPgArray[i].prv = proc->memPgArray[i].prv;
+    proc->memPgArray[i].prv = 0;
+    memPgArray[i].exists_time = proc->memPgArray[i].exists_time;
+    proc->memPgArray[i].exists_time = 0;
+    dskPgArray[i].accesedCount = proc->dskPgArray[i].accesedCount;
+    proc->dskPgArray[i].accesedCount = 0;
+    dskPgArray[i].va = proc->dskPgArray[i].va;
+    proc->dskPgArray[i].va = (char*)0xffffffff;
+    dskPgArray[i].f_location = proc->dskPgArray[i].f_location;
+    proc->dskPgArray[i].f_location = 0;
+  }
+
+#endif
+
 
   // Load program into memory.
   sz = 0;
@@ -92,6 +130,13 @@ exec(char *path, char **argv)
   proc->sz = sz;
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
+
+  //delete parent copied swap file
+  removeSwapFile(proc);
+  //create new swap file
+  createSwapFile(proc);
+
+
   switchuvm(proc);
   freevm(oldpgdir);
   return 0;
@@ -104,4 +149,24 @@ exec(char *path, char **argv)
     end_op();
   }
   return -1;
+
+  //resore backed up data for pages in case exec didnt work
+  #ifndef NONE
+  proc->numOfPagesInMemory = numOfPagesInMemory;
+  proc->numOfPagesInDisk = numOfPagesInDisk;
+  proc->numOfFaultyPages = numOfFaultyPages;
+  proc->totalSwappedFiles = totalSwappedFiles;
+  proc->lstStart = lstStart;
+  proc->lstEnd = lstEnd;
+  for (i = 0; i < MAX_PSYC_PAGES; i++) {
+    proc->memPgArray[i].va = memPgArray[i].va;
+    proc->memPgArray[i].nxt = memPgArray[i].nxt;
+    proc->memPgArray[i].prv = memPgArray[i].prv;
+    proc->memPgArray[i].exists_time = memPgArray[i].exists_time;
+    proc->dskPgArray[i].accesedCount = dskPgArray[i].accesedCount;
+    proc->dskPgArray[i].va = dskPgArray[i].va;
+    proc->dskPgArray[i].f_location = dskPgArray[i].f_location;
+  }
+#endif
+
 }

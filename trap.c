@@ -36,6 +36,10 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+  pde_t * page_location;
+  uint location;
+
+
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();
@@ -77,7 +81,20 @@ trap(struct trapframe *tf)
             cpu->id, tf->cs, tf->eip);
     lapiceoi();
     break;
-   
+
+  case T_PGFLT:
+      location = rcr2();
+      page_table_location = &proc->pgdir[PDX(location)];
+      //check if page table is present in pte
+      if (((int)(*page_table_location) & PTE_P) != 0) { // if p_table not present in pgdir -> page fault
+        // check if page is in swap
+        if (((uint*)PTE_ADDR(P2V(*page_table_location)))[PTX(location)] & PTE_PG) { // if page found in the swap file -> page out
+          pageOut(PTE_ADDR(addr));
+          proc->numOfFaultyPages += 1;
+          return;
+        }
+      }
+
   //PAGEBREAK: 13
   default:
     if(proc == 0 || (tf->cs&3) == 0){

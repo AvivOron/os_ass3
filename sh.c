@@ -154,6 +154,23 @@ main(void)
       break;
     }
   }
+
+//for debugging
+  #ifdef LIFO
+    printf(1, "Paging policy: LIFO\n");
+  #endif
+
+  #ifdef SCFIFO
+  printf(1, "Paging policy: SCFIFO\n");
+  #endif
+
+  #ifdef ALP
+  printf(1, "Paging policy: ALP\n");
+  #endif
+
+  #ifdef NONE
+  printf(1, "Paging policy: NONE\n");
+  #endif
   
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
