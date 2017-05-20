@@ -154,7 +154,7 @@ main(void)
       break;
     }
   }
-
+  printf(1,"we are in main\n");
 //for debugging
   #ifdef LIFO
     printf(1, "Paging policy: LIFO\n");

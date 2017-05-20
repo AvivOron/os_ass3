@@ -820,7 +820,7 @@ void switchPagesScfifo(uint addr){
       proc->lstEnd = selectedPage->prv;
       proc->lstEnd-> nxt =0;
       selectedPage->prv = 0;
-      proc->lstStart = selectedPage;
+      proc->lstStart = selectedPage;  
 
     break;
     }
@@ -836,10 +836,12 @@ void switchPages(uint addr) {
     return;
   }
 #if LIFO
+  printf("switching pages for LIFO\n");
   switchPagesLifo(addr);
 #endif
 
 #if SCFIFO
+  printf("switching pages for SCFIFO\n");
   switchPagesScfifo(addr);
   #endif
 
