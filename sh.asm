@@ -356,9 +356,9 @@ main(void)
      2db:	89 45 f4             	mov    %eax,-0xc(%ebp)
      2de:	83 7d f4 00          	cmpl   $0x0,-0xc(%ebp)
      2e2:	79 cf                	jns    2b3 <main+0x13>
-      break;
-    }
-  }
+  #ifdef NONE
+  printf(1, "Paging policy: NONE\n");
+  #endif
   
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
@@ -416,9 +416,9 @@ main(void)
      375:	83 c4 10             	add    $0x10,%esp
     wait();
      378:	e8 60 0b 00 00       	call   edd <wait>
-      break;
-    }
-  }
+  #ifdef NONE
+  printf(1, "Paging policy: NONE\n");
+  #endif
   
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){

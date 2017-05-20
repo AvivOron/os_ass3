@@ -36,7 +36,7 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
-  pde_t * page_location;
+  pde_t *page_table_location;
   uint location;
 
 
@@ -89,7 +89,7 @@ trap(struct trapframe *tf)
       if (((int)(*page_table_location) & PTE_P) != 0) { // if p_table not present in pgdir -> page fault
         // check if page is in swap
         if (((uint*)PTE_ADDR(P2V(*page_table_location)))[PTX(location)] & PTE_PG) { // if page found in the swap file -> page out
-          pageOut(PTE_ADDR(addr));
+          switchPages(PTE_ADDR(location));
           proc->numOfFaultyPages += 1;
           return;
         }

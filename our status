@@ -1,4 +1,4 @@
-Ours - Asaf's
+                        Ours - Asaf's
 pgInfo - pgdesc
 pgFreeLinkedList - freepg
 numOfPagesInMemory - pagesinmem
@@ -24,9 +24,11 @@ SATURDAY: we stopped in fifoWrite.
 vm.c -> change names: deallocCount, MAX_POSSIBLE, checkProcAccBit (check if needed)
 vm.c -> scFifoMemPaging -> understand it later!!!
 vm.c -> recordNewPage is not named addPageByAlgo
+vm.c -> lifoWrite act different than the original (we use lstEnd instead of iterating through the linked list)
 check if we need proc->totalPageFaultCount and if not - delete references
 sh.c > line 158 > delete the printf's
 task2: exec.c - check if the #NONE parts (start and end of function) is necessary.
 task 3:
 proc.c -> printProcMemPageInfo(), procdump(), exit()
+
 
