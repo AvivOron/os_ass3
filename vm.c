@@ -251,7 +251,7 @@ void lifoMemPaging(char *va){
     }
     else{
       cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
-      panic("no free pages");
+      panic("no free pages1");
     }
   }
 
@@ -267,13 +267,39 @@ void lifoMemPaging(char *va){
         proc->lstStart->prv = &proc->memPgArray[i];
       else//head == 0 so first link inserted is also the tail
         proc->lstEnd = &proc->memPgArray[i];
+
       proc->lstStart = &proc->memPgArray[i];
-      break;
+      return;
     }
-    else{
-      cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
-      panic("no free pages");
-    }
+  }
+    cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
+    panic("no free pages2");
+  
+}
+
+void printMemList(){
+        struct pgFreeLinkedList *l;
+      l = proc->lstStart;
+      cprintf("printing list for proc %d\n",proc->pid);
+      while(l != 0){
+        if(l == proc->lstStart){
+            cprintf("first link va: %d\n",l->va);
+        }
+        else if(l == proc->lstEnd){
+            cprintf("last link va: %d\n",l->va);
+        }
+        else{
+          cprintf("link va: %d\n",l->va);
+        }
+        l = l->nxt;
+      }
+      cprintf("finished print list for proc %d\n",proc->pid);
+}
+
+void printDiskList(){
+  int i;
+  for(i=0;i<15;i++){
+    cprintf("disk page %d, va: %d\n", i, proc->dskPgArray[i].va);
   }
 }
 
@@ -282,18 +308,16 @@ void lifoMemPaging(char *va){
 void addPageByAlgo(char *va) { //recordNewPage (asaf)
 #if LIFO
   lifoMemPaging(va);
-#else
+#endif
 
 #if SCFIFO
   scFifoMemPaging(va);
-#else
+#endif
 
 //#if ALP
   //nfuRecord(va);
 //#endif
-#endif
-#endif
-  proc->numOfPagesInMemory++;
+  proc->numOfPagesInMemory += 1;
 }
 
 //write lifo to disk
@@ -331,7 +355,7 @@ struct pgFreeLinkedList *lifoDskPaging(char *va) {
       return link;
     }
     else {
-      panic("writePageToSwapFile: FIFO no slot for swapped page");
+      panic("writePageToSwapFile: LIFO no slot for swapped page");
       return 0;
     }
   }
@@ -349,65 +373,71 @@ int updateAccessBit(char *va){
 }
 
 struct pgFreeLinkedList *scfifoDskPaging(char *va) {
+
   int i;
   struct pgFreeLinkedList *selectedPage, *oldTail;
   for (i = 0; i < MAX_PSYC_PAGES; i++){
-    if (proc->dskPgArray[i].va == (char*)0xffffffff){
-    //link = proc->head;
-      if (proc->lstStart == 0)
-        panic("scWrite: proc->head is NULL");
-      if (proc->lstStart->nxt == 0)
-        panic("scWrite: single page in phys mem");
+      if (proc->dskPgArray[i].va == (char*)0xffffffff){
+      //link = proc->head;
+        if (proc->lstStart == 0)
+          panic("scWrite: proc->head is NULL");
+        if (proc->lstStart->nxt == 0)
+          panic("scWrite: single page in phys mem");
+        selectedPage = proc->lstEnd;
+    oldTail = proc->lstEnd;// to avoid infinite loop if everyone was accessed
+    int flag = 1;
+    while(updateAccessBit(selectedPage->va) && flag){
+      selectedPage->prv->nxt = 0;
+      proc->lstEnd = selectedPage->prv;
+      selectedPage->prv = 0;
+      selectedPage->nxt = proc->lstStart;
+      proc->lstStart->prv = selectedPage;  
+      proc->lstStart = selectedPage;
       selectedPage = proc->lstEnd;
-  oldTail = proc->lstEnd;// to avoid infinite loop if everyone was accessed
-  int flag = 1;
-  while(updateAccessBit(selectedPage->va) && flag){
-    selectedPage->prv->nxt = 0;
-    proc->lstEnd = selectedPage->prv;
-    selectedPage->prv = 0;
+      if(proc->lstEnd == oldTail)
+        flag = 0;
+    }
+      cprintf("we want to transfer page %d\n",selectedPage->va);
+
+    //Swap
+    proc->dskPgArray[i].va = selectedPage->va;
+    int num = 0;
+    //check if workes
+    if ((num = writeToSwapFile(proc, (char*)PTE_ADDR(selectedPage->va), i * PGSIZE, PGSIZE)) == 0)
+      return 0;
+
+    pte_t *pte1 = walkpgdir(proc->pgdir, (void*)selectedPage->va, 0);
+    if (!*pte1)
+      panic("writePageToSwapFile: pte1 is empty");
+
+    proc->lstEnd = proc->lstEnd->prv;
+    proc->lstEnd->nxt =0;
+
+    kfree((char*)PTE_ADDR(P2V_WO(*walkpgdir(proc->pgdir, selectedPage->va, 0))));
+    *pte1 = PTE_W | PTE_U | PTE_PG;
+    proc->totalSwappedFiles +=1;
+    proc->numOfPagesInDisk +=1;
+
+    lcr3(v2p(proc->pgdir));
+    //proc->lstStart->va = va;
+
+    // move the selected page with new va to start
+    selectedPage->va = va;
     selectedPage->nxt = proc->lstStart;
-    proc->lstStart->prv = selectedPage;  
+    proc->lstEnd = selectedPage->prv;
+    proc->lstEnd-> nxt =0;
+    selectedPage->prv = 0;
     proc->lstStart = selectedPage;
-    selectedPage = proc->lstEnd;
-    if(proc->lstEnd == oldTail)
-      flag = 0;
+
+  printMemList();
+  printDiskList();
+
+    return selectedPage;
   }
-  //Swap
-  proc->dskPgArray[i].va = proc->lstStart->va;
-  int num = 0;
-  //check if workes
-  if ((num = writeToSwapFile(proc, (char*)PTE_ADDR(selectedPage->va), i * PGSIZE, PGSIZE)) == 0)
-    return 0;
 
-  pte_t *pte1 = walkpgdir(proc->pgdir, (void*)selectedPage->va, 0);
-  if (!*pte1)
-    panic("writePageToSwapFile: pte1 is empty");
-
-  proc->lstEnd = proc->lstEnd->prv;
-  proc->lstEnd->nxt =0;
-
-  kfree((char*)PTE_ADDR(P2V_WO(*walkpgdir(proc->pgdir, selectedPage->va, 0))));
-  *pte1 = PTE_W | PTE_U | PTE_PG;
-  proc->totalSwappedFiles +=1;
-  proc->numOfPagesInDisk +=1;
-
-  lcr3(v2p(proc->pgdir));
-  //proc->lstStart->va = va;
-
-  // move the selected page with new va to start
-  selectedPage->va = va;
-  selectedPage->nxt = proc->lstStart;
-  proc->lstEnd = selectedPage->prv;
-  proc->lstEnd-> nxt =0;
-  selectedPage->prv = 0;
-  proc->lstStart = selectedPage;
-
-  return selectedPage;
 }
-else{
-  panic("writePageToSwapFile: FIFO no slot for swapped page");
-}
-}
+    panic("writePageToSwapFile: SCFIFO no slot for swapped page");
+
 return 0;
 }
 
@@ -455,12 +485,12 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 
     //write to disk
     #ifndef NONE
-    if(proc->numOfPagesInMemory>= MAX_PSYC_PAGES){
+    if(proc->numOfPagesInMemory >= MAX_PSYC_PAGES){
       if((l = writePageToSwapFile((char*)a)) == 0){
         panic("error writing page to swap file");
       }
+      newPage = 0;
     }
-    newPage = 0;
     #endif
 
     mem = kalloc();
@@ -472,6 +502,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 
     //write to memory
     #ifndef NONE
+    //cprintf("reached %d\n", newPage);
     if(newPage)
       addPageByAlgo((char*) a);
     #endif
@@ -489,9 +520,11 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 int
 deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
+  //cprintf("deallocuvm: pgdir %d, oldsz %d newsz %d\n",pgdir,oldsz,newsz);
   pte_t *pte;
   uint a, pa;
   int i;
+  int panicFlag = 0;
 
   if(newsz >= oldsz)
     return oldsz;
@@ -509,26 +542,26 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       //update data structures accorfing to deallocation
       if(proc->pgdir == pgdir){
         #ifndef NONE
-        for(i=0;i<MAX_PSYC_PAGES;i++){
-          if(proc->memPgArray[i].va==(char*)a){
-            proc->memPgArray[i].va = (char*)0xffffffff;
-              #if LIFO
-            if(proc->lstStart==&proc->memPgArray[i]){
-              proc->lstStart = proc->memPgArray[i].nxt;
-            }
-            else{
-              struct pgFreeLinkedList * l = proc->lstStart;
-              while(l->nxt != &proc->memPgArray[i]){
-                l = l->nxt;
+          for(i=0;i<MAX_PSYC_PAGES;i++){
+            if(proc->memPgArray[i].va==(char*)a){
+              proc->memPgArray[i].va = (char*)0xffffffff;
+          #if LIFO
+              if(proc->lstStart==&proc->memPgArray[i]){
+                proc->lstStart = proc->memPgArray[i].nxt;
               }
-              l->nxt = proc->memPgArray[i].nxt;
-              proc->memPgArray[i].nxt->prv = l;
-            }
-                //check if needed
-            proc->memPgArray[i].nxt = 0;
+              else{
+                struct pgFreeLinkedList * l = proc->lstStart;
+                while(l->nxt != &proc->memPgArray[i]){
+                  l = l->nxt;
+                }
+                l->nxt = proc->memPgArray[i].nxt;
+                proc->memPgArray[i].nxt->prv = l;
+              }
+                  //check if needed
+              proc->memPgArray[i].nxt = 0;
+          #endif
 
-              #endif
-              #if SCFIFO
+          #if SCFIFO
             int flag = 1;
             if(proc->lstStart == &proc->memPgArray[i]){
               proc->lstStart = proc->memPgArray[i].nxt;
@@ -559,13 +592,17 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
             proc->memPgArray[i].nxt = 0;
             proc->memPgArray[i].prv = 0;
 
-              #endif
+          #endif
+            panicFlag = 1;
             break;
           }
-          else{
-            panic("deallocuvm: page not found");
-          }
+       
         }
+        if(!panicFlag)
+        {
+          panic("deallocuvm: page not found");
+        }
+
         #endif
         proc->numOfPagesInMemory -=1;
       }
@@ -576,18 +613,18 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       *pte = 0;
     }
     else if (*pte &PTE_PG && proc->pgdir == pgdir){
+      panicFlag = 0;
       for(i=0; i < MAX_PSYC_PAGES; i++){
         if(proc->dskPgArray[i].va == (char *)a){
           proc->dskPgArray[i].va = (char*)0xffffffff;
           proc->dskPgArray[i].accesedCount = 0;
           proc->dskPgArray[i].f_location = 0;
           proc->numOfPagesInDisk -= 1;
-          break;
+          panicFlag = 1;
         }
-        else{
-          panic("page not found in swap file");
-        }
-
+      }
+      if(!panicFlag){
+        panic("page not found in swap file");
       }
     }
   }
@@ -767,12 +804,13 @@ void switchPagesScfifo(uint addr){
     struct pgFreeLinkedList *selectedPage, *oldTail;
 
     if (proc->lstStart == 0)
-      panic("scSwap: proc->lstStart is NULL");
+      panic("switchPagesScfifo: proc->lstStart is NULL");
     if (proc->lstStart->nxt == 0)
-      panic("scSwap: single page in phys mem");
+      panic("switchPagesScfifo: single page in phys mem");
 
     selectedPage = proc->lstEnd;
     oldTail = proc->lstEnd;// to avoid infinite loop if somehow everyone was accessed
+  //cprintf("scfifo swap: the mem page va is: %d\n",selectedPage->va);
 
   int flag = 1;
   while(updateAccessBit(selectedPage->va) && flag){
@@ -790,7 +828,7 @@ void switchPagesScfifo(uint addr){
   //find the address of the page table entry to copy into the swap file
   pte_mem = walkpgdir(proc->pgdir, (void*)selectedPage->va, 0);
   if (!*pte_mem)
-    panic("swapFile: SCFIFO pte_mem is empty");
+    panic("switchPagesScfifo: SCFIFO pte_mem is empty");
 
   //find a swap file page descriptor slot
   for (i = 0; i < MAX_PSYC_PAGES; i++){
@@ -799,7 +837,7 @@ void switchPagesScfifo(uint addr){
       //assign the physical page to addr in the relevant page table
       pte_disk = walkpgdir(proc->pgdir, (void*)addr, 0);
       if (!*pte_disk)
-        panic("swapFile: SCFIFO pte_disk is empty");
+        panic("switchPagesScfifo: SCFIFO pte_disk is empty");
      //set page table entry
      //TODO verify we're not setting PTE_U where we shouldn't be...
     *pte_disk = PTE_ADDR(*pte_mem) | PTE_U | PTE_W | PTE_P;// access bit is zeroed...
@@ -822,17 +860,20 @@ void switchPagesScfifo(uint addr){
       selectedPage->prv = 0;
       proc->lstStart = selectedPage;  
 
-    break;
+
+
+    return;
     }
-    else{
-      panic("scSwap: SCFIFO no slot for swapped page");
-    }
-  } 
+
+  }
+
+  panic("switchPagesScfifo: SCFIFO no slot for swapped page");
+ 
 }
 
 void switchPages(uint addr) {
   if (proc->pid <= 2) {
-    proc->numOfPagesInMemory++;
+    proc->numOfPagesInMemory +=1 ;
     return;
   }
 #if LIFO

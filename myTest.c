@@ -9,7 +9,7 @@
 int
 main(int argc, char *argv[]){
 
-	#if FIFO
+	#if LIFO
 
 	int i, j;
 	char *arr[14];

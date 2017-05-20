@@ -44,14 +44,6 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
   struct pgFreeLinkedList memPgArray[MAX_PSYC_PAGES];
   struct pgInfo dskPgArray[MAX_PSYC_PAGES];
 
-  struct pgFreeLinkedList *lstStart = proc->lstStart;
-  struct pgFreeLinkedList *lstEnd = proc->lstEnd;
-  proc->numOfPagesInMemory = 0;
-  proc->numOfPagesInDisk = 0;
-  proc->totalSwappedFiles = 0;
-  proc->numOfFaultyPages = 0;
-  proc->lstStart = 0;
-  proc->lstEnd = 0;
   // clear all pages
   for (i = 0; i < MAX_PSYC_PAGES; i++) {
     memPgArray[i].va = proc->memPgArray[i].va;
@@ -69,6 +61,15 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
     dskPgArray[i].f_location = proc->dskPgArray[i].f_location;
     proc->dskPgArray[i].f_location = 0;
   }
+
+  struct pgFreeLinkedList *lstStart = proc->lstStart;
+  struct pgFreeLinkedList *lstEnd = proc->lstEnd;
+  proc->numOfPagesInMemory = 0;
+  proc->numOfPagesInDisk = 0;
+  proc->totalSwappedFiles = 0;
+  proc->numOfFaultyPages = 0;
+  proc->lstStart = 0;
+  proc->lstEnd = 0;
 
 #endif
 
@@ -137,9 +138,10 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
   //create new swap file
   createSwapFile(proc);
 #endif
-  
+
   switchuvm(proc);
   freevm(oldpgdir);
+  cprintf("exec: pid: %d - number of memory pages:%d\n", proc->pid, proc->numOfPagesInMemory); 
   return 0;
 
  bad:
