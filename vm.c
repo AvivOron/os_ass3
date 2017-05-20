@@ -415,7 +415,7 @@ struct pgFreeLinkedList * writePageToSwapFile(char * va) {
   //TODO delete $$$
 
 #if LIFO
-  return lifoDskPaging();
+  return lifoDskPaging(va);
 #else
 
 #if SCFIFO
@@ -521,8 +521,8 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
               while(l->nxt != &proc->memPgArray[i]){
                 l = l->nxt;
               }
-              l->nxt = proc->memPgArray[i]->nxt;
-              proc->memPgArray[i]->nxt->prv = l;
+              l->nxt = proc->memPgArray[i].nxt;
+              proc->memPgArray[i].nxt->prv = l;
             }
                 //check if needed
             proc->memPgArray[i].nxt = 0;
@@ -547,7 +547,7 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
             if(flag){
               struct pgFreeLinkedList * l = proc->lstStart;
                   //not dealt with case where i doesnt exist
-              while(l->nxt!=0 && l->nxt!=proc->memPgArray[i]){
+              while(l->nxt!=0 && l->nxt!=&proc->memPgArray[i]){
                 l = l->nxt;
               }
               l->nxt = proc->memPgArray[i].nxt;
@@ -836,12 +836,12 @@ void switchPages(uint addr) {
     return;
   }
 #if LIFO
-  printf("switching pages for LIFO\n");
+  cprintf("switching pages for LIFO\n");
   switchPagesLifo(addr);
 #endif
 
 #if SCFIFO
-  printf("switching pages for SCFIFO\n");
+  cprintf("switching pages for SCFIFO\n");
   switchPagesScfifo(addr);
   #endif
 
