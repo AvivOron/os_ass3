@@ -1,4 +1,4 @@
-                        Ours - Asaf's
+Ours - Asaf's
 pgInfo - pgdesc
 pgFreeLinkedList - freepg
 numOfPagesInMemory - pagesinmem
@@ -30,5 +30,5 @@ sh.c > line 158 > delete the printf's
 task2: exec.c - check if the #NONE parts (start and end of function) is necessary.
 task 3:
 proc.c -> printProcMemPageInfo(), procdump(), exit()
-
-
+dont create swapfiles for pid 1,2
+TODO: check swapping for LIFO
