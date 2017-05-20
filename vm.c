@@ -236,47 +236,6 @@ loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
   return 0;
 }
 
-
-void lifoMemPaging(char *va){
-  int i;
-  //check for empty slot in memory free pages table
-  for (i = 0; i < MAX_PSYC_PAGES; i++)
-    if (proc->memPgArray[i].va == (char*)0xffffffff){
-      proc->memPgArray[i].va = va;
-        //adding each page record to the end, will extract the head
-      proc->memPgArray[i].prv = proc->lstEnd;
-      proc->lstEnd = &proc->memPgArray[i];
-      proc->lstEnd->nxt = 0;
-      break;
-    }
-    else{
-      cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
-      panic("no free pages1");
-    }
-  }
-
-//fix later, check that it works
-  void scFifoMemPaging(char *va){
-    int i;
-    for (i = 0; i < MAX_PSYC_PAGES; i++){
-      if (proc->memPgArray[i].va == (char*)0xffffffff){
-        proc->memPgArray[i].va = va;
-        proc->memPgArray[i].nxt = proc->lstStart;
-        proc->memPgArray[i].prv = 0;
-      if(proc->lstStart != 0)// old head points back to new head
-        proc->lstStart->prv = &proc->memPgArray[i];
-      else//head == 0 so first link inserted is also the tail
-        proc->lstEnd = &proc->memPgArray[i];
-
-      proc->lstStart = &proc->memPgArray[i];
-      return;
-    }
-  }
-    cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
-    panic("no free pages2");
-  
-}
-
 void printMemList(){
         struct pgFreeLinkedList *l;
       l = proc->lstStart;
@@ -304,6 +263,55 @@ void printDiskList(){
 }
 
 
+void lifoMemPaging(char *va){
+  int i;
+  //check for empty slot in memory free pages table
+  for (i = 0; i < MAX_PSYC_PAGES; i++){
+    if (proc->memPgArray[i].va == (char*)0xffffffff){
+      proc->memPgArray[i].va = va;
+        //adding each page record to the end, will extract the head
+      proc->memPgArray[i].prv = proc->lstEnd;
+      if(proc->lstEnd != 0){
+        proc->lstEnd->nxt = &proc->memPgArray[i];
+      }
+      proc->lstEnd = &proc->memPgArray[i];
+      proc->lstEnd->nxt = 0;
+      if(proc->lstStart == 0){
+        proc->lstStart = &proc->memPgArray[i];
+      }
+
+      return;
+    }
+  }
+
+  cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
+  panic("no free pages1");
+}
+
+//fix later, check that it works
+  void scFifoMemPaging(char *va){
+    int i;
+    for (i = 0; i < MAX_PSYC_PAGES; i++){
+      if (proc->memPgArray[i].va == (char*)0xffffffff){
+        proc->memPgArray[i].va = va;
+        proc->memPgArray[i].nxt = proc->lstStart;
+        proc->memPgArray[i].prv = 0;
+      if(proc->lstStart != 0)// old head points back to new head
+        proc->lstStart->prv = &proc->memPgArray[i];
+      else//head == 0 so first link inserted is also the tail
+        proc->lstEnd = &proc->memPgArray[i];
+
+      proc->lstStart = &proc->memPgArray[i];
+      return;
+    }
+  }
+    cprintf("panic follows, pid:%d, name:%s\n", proc->pid, proc->name);
+    panic("no free pages2");
+  
+}
+
+
+
 //new page in memmory by algo
 void addPageByAlgo(char *va) { //recordNewPage (asaf)
 #if LIFO
@@ -328,12 +336,7 @@ struct pgFreeLinkedList *lifoDskPaging(char *va) {
     if (proc->dskPgArray[i].va == (char*)0xffffffff){
       link = proc->lstEnd; //changed from lstStart
       if (link == 0)
-        panic("fifoWrite: proc->end is NULL");
-
-
-      //if(DEBUG){
-      //  cprintf("FIFO chose to page out page starting at 0x%x \n\n", l->va);
-      //}
+        panic("lifoDskPaging: lstEnd is empty");
 
       proc->dskPgArray[i].va = link->va;
       int num = 0;
@@ -342,7 +345,7 @@ struct pgFreeLinkedList *lifoDskPaging(char *va) {
         return 0;
       pte_t *pte1 = walkpgdir(proc->pgdir, (void*)link->va, 0);
       if (!*pte1)
-        panic("writePageToSwapFile: pte1 is empty");
+        panic("lifoDskPaging: pte1 is empty");
 
       kfree((char*)PTE_ADDR(P2V_WO(pte1))); //changed
       *pte1 = PTE_W | PTE_U | PTE_PG;
@@ -352,13 +355,14 @@ struct pgFreeLinkedList *lifoDskPaging(char *va) {
       lcr3(v2p(proc->pgdir));
 
       link->va = va;
+
       return link;
     }
-    else {
-      panic("writePageToSwapFile: LIFO no slot for swapped page");
-      return 0;
-    }
   }
+printMemList();
+printDiskList();
+
+  panic("lifoDskPaging: LIFO no slot for swapped page");
   return 0;
 }
 
@@ -436,6 +440,7 @@ struct pgFreeLinkedList *scfifoDskPaging(char *va) {
   }
 
 }
+
     panic("writePageToSwapFile: SCFIFO no slot for swapped page");
 
 return 0;
@@ -446,17 +451,15 @@ struct pgFreeLinkedList * writePageToSwapFile(char * va) {
 
 #if LIFO
   return lifoDskPaging(va);
-#else
+#endif
 
 #if SCFIFO
   return scfifoDskPaging(va); //check why we need va
-#else
+#endif
 
 //#if NFU
 //  return nfuWrite(va);
 //#endif
-#endif
-#endif
   //TODO: delete cprintf("none of the above...\n");
   return 0;
 }
@@ -753,16 +756,13 @@ void switchPagesLifo(uint addr){
   curr = proc->lstEnd;
 
   if (curr == 0)
-    panic("LifoSwap: proc->lstStart is NULL");
-
-  //if(DEBUG){
-  //  cprintf("FIFO chose to page out page starting at 0x%x \n\n", l->va);
-  //}
+    panic("LifoSwap: proc->lstEnd is NULL");
 
   //look for the memmory page we want to switch
   pte_mem = walkpgdir(proc->pgdir, (void*)curr->va, 0);
-  if (!*pte_mem)
+  if (!*pte_mem){
     panic("swapFile: LIFO pte_mem is empty");
+  }
   //find the addr in Disk
   for (i = 0; i < MAX_PSYC_PAGES; i++){
     if (proc->dskPgArray[i].va == (char*)PTE_ADDR(addr)){
@@ -789,12 +789,10 @@ void switchPagesLifo(uint addr){
       *pte_mem = PTE_U | PTE_W | PTE_PG;
         //update curr to hold the new va
       curr->va = (char*)PTE_ADDR(addr);
-      break;
-    }
-    else{
-      panic("swappages");
+      return;
     }
   }
+  panic("swappages");
 }
 
 void switchPagesScfifo(uint addr){

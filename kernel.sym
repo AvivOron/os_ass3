@@ -1,7 +1,7 @@
 80100000 .text
-8010a464 .rodata
-8010b053 .stab
-8010b054 .stabstr
+8010a400 .rodata
+8010b001 .stab
+8010b002 .stabstr
 8010c000 .data
 8010e5a0 .bss
 00000000 .debug_line
@@ -176,7 +176,7 @@
 80107975 vector24
 80107c84 vector111
 8010807d vector200
-801090a5 addPageByAlgo
+80109110 addPageByAlgo
 80107af8 vector67
 80107d95 vector138
 80107b37 vector74
@@ -191,7 +191,7 @@
 80106fe9 sys_fork
 8010f660 bcache
 80107f2d vector172
-80108e5c scFifoMemPaging
+80108fdb scFifoMemPaging
 80108269 vector241
 80115344 ismp
 80105c68 getcallerpcs
@@ -210,7 +210,7 @@
 80101321 filedup
 80102941 removeSwapFile
 80102849 namei
-8010a3d4 switchPages
+8010a36f switchPages
 8010795a vector21
 80100034 binit
 80107f69 vector177
@@ -227,7 +227,7 @@
 8010609b fetchint
 801089e2 setupkvm
 80105f51 memcpy
-80109b63 freevm
+80109af7 freevm
 801078b4 vector1
 80107f75 vector178
 801079f3 vector38
@@ -237,7 +237,7 @@
 80107d59 vector133
 80107b2e vector73
 80107ddd vector144
-80108f91 printMemList
+80108d89 printMemList
 80108305 vector254
 801016a5 readsb
 8010e004 nextpid
@@ -248,12 +248,12 @@
 80107f45 vector174
 80108281 vector243
 801036e7 cpunum
-801092c8 scfifoDskPaging
+80109341 scfifoDskPaging
 80101296 fileinit
 8011f100 gdt
 80105b8d initlock
 80107d1d vector128
-80109df8 copyout
+80109d8c copyout
 80107b76 vector81
 801058ad sleep
 8010375b microdelay
@@ -284,7 +284,7 @@
 80107c96 vector113
 801032a7 freerange
 80107d02 vector125
-8010961a allocuvm
+80109693 allocuvm
 801071ec trapret
 8010813d vector216
 80107ad4 vector63
@@ -314,8 +314,8 @@
 801081cd vector228
 80107a17 vector42
 80107c9f vector114
-80109d9e uva2ka
-80109e96 switchPagesLifo
+80109d32 uva2ka
+80109e2a switchPagesLifo
 80107f51 vector175
 80107dd1 vector143
 801012b4 filealloc
@@ -326,7 +326,7 @@
 80107dc5 vector142
 80107c21 vector100
 80108089 vector201
-80109c03 clearpteu
+80109b97 clearpteu
 80107232 tvinit
 80107ab9 vector60
 8010796c vector23
@@ -394,7 +394,7 @@
 80104959 pipewrite
 80105fbd strncpy
 80107b1c vector71
-80109c44 copyuvm
+80109bd8 copyuvm
 80113820 ftable
 80107e9d vector160
 8010615f argptr
@@ -437,7 +437,7 @@
 80101ab1 iupdate
 8010c000 data
 80105e12 memset
-80108d89 lifoMemPaging
+80108e9d lifoMemPaging
 801081fd vector232
 80103faa main
 80108aac switchkvm
@@ -470,12 +470,12 @@
 8011e8e0 idt
 80108155 vector218
 80104b70 pinit
-8010973f deallocuvm
+801097b8 deallocuvm
 801081a9 vector225
 80107fe1 vector187
 80104eca growproc
 80115940 ncpu
-80109059 printDiskList
+80108e51 printDiskList
 801079ab vector30
 80104daf userinit
 801001b6 bread
@@ -521,7 +521,7 @@
 80108095 vector202
 8010839a seginit
 80101f4b iunlockput
-80109604 writePageToSwapFile
+8010967d writePageToSwapFile
 80107b25 vector72
 80107a8c vector55
 80107d0b vector126
@@ -547,8 +547,8 @@
 801031f5 ioapicenable
 801066a5 isdirempty
 80105d51 popcli
-8010a09a switchPagesScfifo
-801090d8 lifoDskPaging
+8010a035 switchPagesScfifo
+80109143 lifoDskPaging
 8010e098 vectors
 80107a71 vector52
 80107938 vector17
@@ -564,7 +564,7 @@
 80108251 vector239
 80107beb vector94
 80107be2 vector93
-80109270 updateAccessBit
+801092e9 updateAccessBit
 80103a4a initlog
 80107fed vector188
 80107a4d vector48
