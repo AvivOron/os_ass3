@@ -356,17 +356,19 @@ main(void)
      2db:	89 45 f4             	mov    %eax,-0xc(%ebp)
      2de:	83 7d f4 00          	cmpl   $0x0,-0xc(%ebp)
      2e2:	79 cf                	jns    2b3 <main+0x13>
-  #ifdef ALP
-  printf(1, "Paging policy: ALP\n");
-  #endif
-
-  #ifdef NONE
-  printf(1, "Paging policy: NONE\n");
+      break;
+    }
+  }
+//for debugging
+  #ifdef LIFO
+    printf(1, "Paging policy: LIFO\n");
      2e4:	83 ec 08             	sub    $0x8,%esp
      2e7:	68 63 14 00 00       	push   $0x1463
      2ec:	6a 01                	push   $0x1
      2ee:	e8 6b 0d 00 00       	call   105e <printf>
      2f3:	83 c4 10             	add    $0x10,%esp
+  #ifdef NONE
+  printf(1, "Paging policy: NONE\n");
   #endif
   
   // Read and run input commands.

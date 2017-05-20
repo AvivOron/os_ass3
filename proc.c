@@ -185,7 +185,10 @@ fork(void) //copy paging data of parent
   pid = np->pid;
 
   //swap file changes
+  #ifndef NONE
   createSwapFile(np);
+  #endif
+
   char buffer[PGSIZE/2] = "";
   int bytsRead = 0;
   int off = 0;
@@ -261,9 +264,11 @@ exit(void)
   if(proc == initproc)
     panic("init exiting");
 
+#ifndef NONE
   //remove the swap files
   if(removeSwapFile(proc)!=0)
     panic("couldnt delete swap file");
+#endif
 
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){

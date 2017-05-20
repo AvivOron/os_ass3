@@ -131,12 +131,13 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
 
+#ifndef NONE
   //delete parent copied swap file
   removeSwapFile(proc);
   //create new swap file
   createSwapFile(proc);
-
-
+#endif
+  
   switchuvm(proc);
   freevm(oldpgdir);
   return 0;
