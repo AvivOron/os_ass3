@@ -56,19 +56,18 @@ struct context {
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 //struct for page infomration
-struct pgInfo { //pgdesc (asaf)
-  uint f_location; //swaploc (asaf) // 
+struct pgInfo { 
+  uint f_location; 
   char * va; //virtual address
-  //int accesedCount; 
 
 };
 
 //struct for free page linked list
-struct pgFreeLinkedList { //freepg (asaf)
-  struct pgFreeLinkedList * prv; //prev (asaf) // 
-  struct pgFreeLinkedList * nxt; //next (asaf) // 
+struct pgFreeLinkedList { 
+  struct pgFreeLinkedList * prv; 
+  struct pgFreeLinkedList * nxt; 
   char * va; //virtual address
-  int exists_time; //age (asaf)
+  int exists_time; 
   int accesedCount;
 
 };
@@ -94,14 +93,14 @@ struct proc {
   struct file *swapFile;			//page file
 
   //paging information
-  struct pgFreeLinkedList memPgArray[MAX_PSYC_PAGES];  //freepages (asaf) // Pre-allocated space for the pages in physical memory linked list
-  struct pgInfo dskPgArray[MAX_PSYC_PAGES]; // swappedpages (asaf) // Pre-allocated space for the pages in swap file array
-  struct pgFreeLinkedList *lstStart;  //head (asaf)      
-  struct pgFreeLinkedList *lstEnd; //tail (asaf)
-  int numOfPagesInMemory; //pagesinmem (asaf)
-  int numOfPagesInDisk;        // pagesinswapfile (asaf)
-  int numOfFaultyPages;    // totalPageFaultCount (asaf) //page faults in process
-  int totalNumOfPagedOut;     // totalPagedOutCount (asaf) //number of pages placed in the swap file
+  struct pgFreeLinkedList memPgArray[MAX_PSYC_PAGES];  // Pre-allocated space for the pages in physical memory linked list
+  struct pgInfo dskPgArray[MAX_PSYC_PAGES]; // Pre-allocated space for the pages in swap file array
+  struct pgFreeLinkedList *lstStart;       
+  struct pgFreeLinkedList *lstEnd; 
+  int numOfPagesInMemory; 
+  int numOfPagesInDisk;        
+  int numOfFaultyPages;     //page faults in process
+  int totalNumOfPagedOut;      //number of pages placed in the swap file
 
 };
 

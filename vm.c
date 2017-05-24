@@ -8,12 +8,10 @@
 #include "elf.h"
 
 #define SIZEOF_BUFFER PGSIZE /4 
-#define MAX_POSSIBLE  ~0x80000000
 
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
 struct segdesc gdt[NSEGS];
-int deallocCount = 0;
 
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
@@ -67,23 +65,6 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
   }
   return &pgtab[PTX(va)];
 }
-
-//can be deleted?
-void
-checkProcAccBit(){ 
-  int i;
-  pte_t *pte1;
-
-  for (i = 0; i < MAX_PSYC_PAGES; i++)
-    if (proc->memPgArray[i].va != (char*)0xffffffff){
-      pte1 = walkpgdir(proc->pgdir, (void*)proc->memPgArray[i].va, 0);
-      if (!*pte1){
-        cprintf("checkAccessedBit: pte1 is empty\n");
-        continue;
-      }
-      cprintf("checkAccessedBit: pte1 & PTE_A == %d\n", (*pte1) & PTE_A);
-    }
-  }
 
 // Create PTEs for virtual addresses starting at va that refer to
 // physical addresses starting at pa. va and size might not
@@ -314,7 +295,7 @@ void lifoMemPaging(char *va){
 
 
 //new page in memmory by algo
-void addPageByAlgo(char *va) { //recordNewPage (asaf)
+void addPageByAlgo(char *va) { 
 #if LIFO
   lifoMemPaging(va);
 #endif
@@ -349,7 +330,7 @@ struct pgFreeLinkedList *lifoDskPaging(char *va) {
       if (!*pte1)
         panic("lifoDskPaging: pte1 is empty");
 
-      kfree((char*)PTE_ADDR(P2V_WO(pte1))); //changed
+      kfree((char*)PTE_ADDR(P2V_WO(*walkpgdir(proc->pgdir, link->va, 0))));
       *pte1 = PTE_W | PTE_U | PTE_PG;
       proc->numOfPagesInDisk += 1;
       proc->totalNumOfPagedOut += 1;
@@ -357,12 +338,12 @@ struct pgFreeLinkedList *lifoDskPaging(char *va) {
       lcr3(v2p(proc->pgdir));
 
       link->va = va;
+      //printMemList();
+      //printDiskList();
 
       return link;
     }
   }
-printMemList();
-printDiskList();
 
   panic("lifoDskPaging: LIFO no slot for swapped page");
   return 0;
@@ -372,7 +353,7 @@ int updateAccessBit(char *va){
   uint accessed;
   pte_t *pte = walkpgdir(proc->pgdir, (void*)va, 0);
   if (!*pte)
-    panic("checkAccBit: pte1 is empty");
+    panic("updateAccessBit: pte is empty");
   accessed = (*pte) & PTE_A;
   (*pte) &= ~PTE_A;
   return accessed;
@@ -403,7 +384,6 @@ struct pgFreeLinkedList *scfifoDskPaging(char *va) {
       if(proc->lstEnd == oldTail)
         flag = 0;
     }
-      cprintf("we want to transfer page %d\n",selectedPage->va);
 
     //Swap
     proc->dskPgArray[i].va = selectedPage->va;
@@ -435,8 +415,8 @@ struct pgFreeLinkedList *scfifoDskPaging(char *va) {
     selectedPage->prv = 0;
     proc->lstStart = selectedPage;
 
-  printMemList();
-  printDiskList();
+  //printMemList();
+  //printDiskList();
 
     return selectedPage;
   }
@@ -480,7 +460,7 @@ struct pgFreeLinkedList *LapDskPaging(char *va) {
       if (!*pte1)
         panic("lapDskPaging: pte1 is empty");
 
-      kfree((char*)PTE_ADDR(P2V_WO(pte1))); //changed
+      kfree((char*)PTE_ADDR(P2V_WO(*walkpgdir(proc->pgdir, link->va, 0))));
       *pte1 = PTE_W | PTE_U | PTE_PG;
       proc->totalNumOfPagedOut +=1;
       proc->numOfPagesInDisk += 1;
@@ -503,6 +483,7 @@ printDiskList();
 struct pgFreeLinkedList * writePageToSwapFile(char * va) {
 
 #if LIFO
+  //cprintf("calling lifoDskPaing\n");
   return lifoDskPaging(va);
 #endif
 
@@ -542,6 +523,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     //write to disk
     #ifndef NONE
     if(proc->numOfPagesInMemory >= MAX_PSYC_PAGES){
+      //cprintf("we reached the max psyc pages\n");
       if((l = writePageToSwapFile((char*)a)) == 0){
         panic("error writing page to swap file");
       }
@@ -1007,6 +989,8 @@ void switchPages(uint addr) {
     proc->numOfPagesInMemory +=1 ;
     return;
   }
+
+cprintf("Page fault occured!\n");
 #if LIFO
   cprintf("switching pages for LIFO\n");
   switchPagesLifo(addr);
