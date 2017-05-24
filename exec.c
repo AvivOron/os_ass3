@@ -39,8 +39,8 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
 #ifndef NONE
   int numOfPagesInMemory = proc->numOfPagesInMemory;
   int numOfPagesInDisk = proc->numOfPagesInDisk;
+  int totalNumOfPagedOut = proc->totalNumOfPagedOut;
   int numOfFaultyPages = proc->numOfFaultyPages;
-  int totalSwappedFiles = proc->totalSwappedFiles;
   struct pgFreeLinkedList memPgArray[MAX_PSYC_PAGES];
   struct pgInfo dskPgArray[MAX_PSYC_PAGES];
 
@@ -68,7 +68,7 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
   struct pgFreeLinkedList *lstEnd = proc->lstEnd;
   proc->numOfPagesInMemory = 0;
   proc->numOfPagesInDisk = 0;
-  proc->totalSwappedFiles = 0;
+  proc->totalNumOfPagedOut = 0;
   proc->numOfFaultyPages = 0;
   proc->lstStart = 0;
   proc->lstEnd = 0;
@@ -159,8 +159,8 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
   #ifndef NONE
   proc->numOfPagesInMemory = numOfPagesInMemory;
   proc->numOfPagesInDisk = numOfPagesInDisk;
+  proc->totalNumOfPagedOut = totalNumOfPagedOut;
   proc->numOfFaultyPages = numOfFaultyPages;
-  proc->totalSwappedFiles = totalSwappedFiles;
   proc->lstStart = lstStart;
   proc->lstEnd = lstEnd;
   for (i = 0; i < MAX_PSYC_PAGES; i++) {

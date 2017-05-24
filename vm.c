@@ -351,8 +351,8 @@ struct pgFreeLinkedList *lifoDskPaging(char *va) {
 
       kfree((char*)PTE_ADDR(P2V_WO(pte1))); //changed
       *pte1 = PTE_W | PTE_U | PTE_PG;
-      proc->totalSwappedFiles +=1;
       proc->numOfPagesInDisk += 1;
+      proc->totalNumOfPagedOut += 1;
 
       lcr3(v2p(proc->pgdir));
 
@@ -421,8 +421,8 @@ struct pgFreeLinkedList *scfifoDskPaging(char *va) {
 
     kfree((char*)PTE_ADDR(P2V_WO(*walkpgdir(proc->pgdir, selectedPage->va, 0))));
     *pte1 = PTE_W | PTE_U | PTE_PG;
-    proc->totalSwappedFiles +=1;
     proc->numOfPagesInDisk +=1;
+    proc->totalNumOfPagedOut += 1;
 
     lcr3(v2p(proc->pgdir));
     //proc->lstStart->va = va;
@@ -482,7 +482,7 @@ struct pgFreeLinkedList *LapDskPaging(char *va) {
 
       kfree((char*)PTE_ADDR(P2V_WO(pte1))); //changed
       *pte1 = PTE_W | PTE_U | PTE_PG;
-      proc->totalSwappedFiles +=1;
+      proc->totalNumOfPagedOut +=1;
       proc->numOfPagesInDisk += 1;
 
       lcr3(v2p(proc->pgdir));
@@ -1017,12 +1017,12 @@ void switchPages(uint addr) {
   switchPagesScfifo(addr);
   #endif
 
-/*#if LAP
+#if LAP
   cprintf("switching pages for LAP\n");
   switchPagesLap(addr);
 #endif
-*/
+
   lcr3(v2p(proc->pgdir));
-  proc->totalSwappedFiles += 1;
+  proc->totalNumOfPagedOut += 1;
 }
 

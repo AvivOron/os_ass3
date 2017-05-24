@@ -3,7 +3,7 @@
 #define MAX_PSYC_PAGES  15
 #define MAX_TOTAL_PAGES 30
 
-void updateAccesedCount();
+
 
 // Per-CPU state
 struct cpu {
@@ -101,7 +101,7 @@ struct proc {
   int numOfPagesInMemory; //pagesinmem (asaf)
   int numOfPagesInDisk;        // pagesinswapfile (asaf)
   int numOfFaultyPages;    // totalPageFaultCount (asaf) //page faults in process
-  int totalSwappedFiles;     // totalPagedOutCount (asaf) //number of pages placed in the swap file
+  int totalNumOfPagedOut;     // totalPagedOutCount (asaf) //number of pages placed in the swap file
 
 };
 

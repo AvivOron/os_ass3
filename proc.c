@@ -8,6 +8,7 @@
 #include "spinlock.h"
 //#include "kalloc.h"
 
+void specificprocdump(struct proc *p);
 
 struct {
   struct spinlock lock;
@@ -76,8 +77,8 @@ found:
   p->lstEnd = 0; 
   p->numOfPagesInMemory = 0;
   p->numOfPagesInDisk = 0;
+  p->totalNumOfPagedOut = 0;
   p->numOfFaultyPages = 0;
-  p->totalSwappedFiles = 0;
 
   for (int i = 0; i < MAX_PSYC_PAGES; i++){
     p->memPgArray[i].va = (char*)0xffffffff;
@@ -171,6 +172,8 @@ fork(void) //copy paging data of parent
   //saving the parent pages data
   np->numOfPagesInMemory = proc->numOfPagesInMemory;
   np->numOfPagesInDisk = proc->numOfPagesInDisk;
+  np->totalNumOfPagedOut = 0;
+  np->numOfFaultyPages = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -259,6 +262,8 @@ exit(void)
     panic("couldnt delete swap file");
 #endif
 
+
+
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
     if(proc->ofile[fd]){
@@ -290,6 +295,9 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
+  #if TRUE
+    specificprocdump(proc);
+  #endif
   sched();
   panic("zombie exit");
 }
@@ -511,12 +519,8 @@ kill(int pid)
   return -1;
 }
 
-//PAGEBREAK: 36
-// Print a process listing to console.  For debugging.
-// Runs when user types ^P on console.
-// No lock to avoid wedging a stuck machine further.
 void
-procdump(void)
+specificprocdump(struct proc *p)
 {
   static char *states[] = {
   [UNUSED]    "unused",
@@ -526,25 +530,50 @@ procdump(void)
   [RUNNING]   "run   ",
   [ZOMBIE]    "zombie"
   };
-  int i;
-  struct proc *p;
+
   char *state;
   uint pc[10];
-  
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+  int i;
+
+  if(p->state == UNUSED)
+    return;
+  if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+    state = states[p->state];
+  else
+    state = "???";
+  cprintf("%d %s %d %d %d %d %s\n", p->pid,state, p->numOfPagesInMemory, p->numOfPagesInDisk, p->numOfFaultyPages, p->totalNumOfPagedOut, p->name);
+
+  if(p->state == SLEEPING){
+    getcallerpcs((uint*)p->context->ebp+2, pc);
+    for(i=0; i<10 && pc[i] != 0; i++)
+      cprintf(" %p", pc[i]);
+  }
+
+
+}
+
+//PAGEBREAK: 36
+// Print a process listing to console.  For debugging.
+// Runs when user types ^P on console.
+// No lock to avoid wedging a stuck machine further.
+void
+procdump(void)
+{
+
+  struct proc *p;
+  int freePages = 0;
+  int totalPages = 0;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ 
     if(p->state == UNUSED)
       continue;
-    if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
-      state = states[p->state];
-    else
-      state = "???";
-    cprintf("%d %s %s", p->pid, state, p->name);
-    if(p->state == SLEEPING){
-      getcallerpcs((uint*)p->context->ebp+2, pc);
-      for(i=0; i<10 && pc[i] != 0; i++)
-        cprintf(" %p", pc[i]);
-    }
+
+    specificprocdump(p);
+    freePages += MAX_PSYC_PAGES - p->numOfPagesInMemory;
+    totalPages += MAX_PSYC_PAGES;
     cprintf("\n");
+
   }
+  cprintf("%d / %d free pages in the system\n",freePages,totalPages);
+
 }
 
