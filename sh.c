@@ -163,8 +163,8 @@ main(void)
   printf(1, "Paging policy: SCFIFO\n");
   #endif
 
-  #ifdef ALP
-  printf(1, "Paging policy: ALP\n");
+  #ifdef LAP
+  printf(1, "Paging policy: LAP\n");
   #endif
 
   #ifdef NONE

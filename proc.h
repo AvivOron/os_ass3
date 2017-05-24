@@ -3,6 +3,7 @@
 #define MAX_PSYC_PAGES  15
 #define MAX_TOTAL_PAGES 30
 
+void updateAccesedCount();
 
 // Per-CPU state
 struct cpu {
@@ -58,7 +59,7 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 struct pgInfo { //pgdesc (asaf)
   uint f_location; //swaploc (asaf) // 
   char * va; //virtual address
-  int accesedCount; 
+  //int accesedCount; 
 
 };
 
@@ -68,6 +69,7 @@ struct pgFreeLinkedList { //freepg (asaf)
   struct pgFreeLinkedList * nxt; //next (asaf) // 
   char * va; //virtual address
   int exists_time; //age (asaf)
+  int accesedCount;
 
 };
 

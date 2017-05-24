@@ -19,7 +19,6 @@ static struct proc *initproc;
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
-
 static void wakeup1(void *chan);
 
 void
@@ -85,7 +84,8 @@ found:
     p->memPgArray[i].nxt = 0;
     p->memPgArray[i].prv = 0;
     p->memPgArray[i].exists_time = 0;
-    p->dskPgArray[i].accesedCount = 0;
+    p->memPgArray[i].accesedCount = 0;
+    //p->dskPgArray[i].accesedCount = 0;
     p->dskPgArray[i].va = (char*)0xffffffff;
     p->dskPgArray[i].f_location = 0;
   }
@@ -205,7 +205,8 @@ fork(void) //copy paging data of parent
   for(int i = 0; i< MAX_PSYC_PAGES; i++){
     np->memPgArray[i].va = proc->memPgArray[i].va;
     np->memPgArray[i].exists_time = proc->memPgArray[i].exists_time;
-    np->dskPgArray[i].accesedCount = proc->dskPgArray[i].accesedCount;
+    np->memPgArray[i].accesedCount = proc->memPgArray[i].accesedCount;
+    //np->dskPgArray[i].accesedCount = proc->dskPgArray[i].accesedCount;
     np->dskPgArray[i].va = proc->dskPgArray[i].va;
     np->dskPgArray[i].f_location = proc->dskPgArray[i].f_location;
   }
@@ -221,19 +222,7 @@ fork(void) //copy paging data of parent
   }
 
 //if SCFIFO initiate head and tail of linked list accordingly
-  #if SCFIFO
-    for (int i = 0; i < MAX_PSYC_PAGES; i++) {
-      if (proc->lstStart->va == np->memPgArray[i].va){
-        np->lstStart = &np->memPgArray[i];
-      }
-      if (proc->lstEnd->va == np->memPgArray[i].va){
-        np->lstEnd = &np->memPgArray[i];
-      }
-    }
-  #endif
-
-//if LIFO initiate head and tail of linked list accordingly, ***assuming extraction from tail said***
-  #if LIFO
+  #ifndef NONE
     for (int i = 0; i < MAX_PSYC_PAGES; i++) {
       if (proc->lstStart->va == np->memPgArray[i].va){
         np->lstStart = &np->memPgArray[i];
@@ -558,3 +547,4 @@ procdump(void)
     cprintf("\n");
   }
 }
+

@@ -14,6 +14,7 @@ extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
 
+
 void
 tvinit(void)
 {
@@ -57,6 +58,13 @@ trap(struct trapframe *tf)
       ticks++;
       wakeup(&ticks);
       release(&tickslock);
+    }else{
+
+      #if LAP
+        if(proc && proc->pid > 2) {
+          updateAccesedCount();
+        }
+      #endif
     }
     lapiceoi();
     break;
@@ -125,4 +133,35 @@ trap(struct trapframe *tf)
   // Check if the process has been killed since we yielded
   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
     exit();
+}
+
+void updateAccesedCount(){
+  struct pgFreeLinkedList *pg;
+  pte_t *pte_mem;
+
+  pg = proc->lstStart;
+  if (pg == 0)
+    panic("LapSwap: proc->lstStart is NULL");
+
+  while(pg != 0){
+
+    pde_t *pde;
+    pte_t *pgtab;
+
+    pde = &proc->pgdir[PDX((void*)pg->va)];
+    if(*pde & PTE_P){
+      pgtab = (pte_t*)p2v(PTE_ADDR(*pde));
+    }
+
+    pte_mem = &pgtab[PTX((void*)pg->va)];
+
+    int accessed = (*pte_mem) & PTE_A;
+      
+    if(accessed){
+      pg->accesedCount += 1;
+      (*pte_mem) &= ~PTE_A;
+    }
+
+    pg = pg->nxt;    
+  }
 }

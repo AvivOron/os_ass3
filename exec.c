@@ -54,8 +54,10 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
     proc->memPgArray[i].prv = 0;
     memPgArray[i].exists_time = proc->memPgArray[i].exists_time;
     proc->memPgArray[i].exists_time = 0;
-    dskPgArray[i].accesedCount = proc->dskPgArray[i].accesedCount;
-    proc->dskPgArray[i].accesedCount = 0;
+    memPgArray[i].exists_time = proc->memPgArray[i].accesedCount;
+    proc->memPgArray[i].accesedCount = 0;
+    //dskPgArray[i].accesedCount = proc->dskPgArray[i].accesedCount;
+    //proc->dskPgArray[i].accesedCount = 0;
     dskPgArray[i].va = proc->dskPgArray[i].va;
     proc->dskPgArray[i].va = (char*)0xffffffff;
     dskPgArray[i].f_location = proc->dskPgArray[i].f_location;
@@ -166,7 +168,9 @@ exec(char *path, char **argv) //if exec is called, bkp olf pages, allocate new. 
     proc->memPgArray[i].nxt = memPgArray[i].nxt;
     proc->memPgArray[i].prv = memPgArray[i].prv;
     proc->memPgArray[i].exists_time = memPgArray[i].exists_time;
-    proc->dskPgArray[i].accesedCount = dskPgArray[i].accesedCount;
+    proc->memPgArray[i].accesedCount = memPgArray[i].accesedCount;
+
+    //proc->dskPgArray[i].accesedCount = dskPgArray[i].accesedCount;
     proc->dskPgArray[i].va = dskPgArray[i].va;
     proc->dskPgArray[i].f_location = dskPgArray[i].f_location;
   }
