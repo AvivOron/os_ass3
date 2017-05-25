@@ -103,9 +103,3 @@ struct proc {
   int totalNumOfPagedOut;      //number of pages placed in the swap file
 
 };
-
-// Process memory is laid out contiguously, low addresses first:
-//   text
-//   original data and bss
-//   fixed-size stack
-//   expandable heap
