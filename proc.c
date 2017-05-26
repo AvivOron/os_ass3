@@ -190,7 +190,7 @@ fork(void) //copy paging data of parent
   //swap file changes
   #ifndef NONE
   createSwapFile(np);
-  #endif
+  
 
   char buffer[PGSIZE/2] = "";
   int bytsRead = 0;
@@ -223,6 +223,7 @@ fork(void) //copy paging data of parent
         np->memPgArray[i].nxt = &np->memPgArray[j];
     }
   }
+  #endif
 
 //if SCFIFO initiate head and tail of linked list accordingly
   #ifndef NONE
